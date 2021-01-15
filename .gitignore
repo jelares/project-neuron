@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Jetbrains packages
+.idea/
+
+# Pyspice
+PySpice-1.4.3/
+examples/

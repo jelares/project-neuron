@@ -1,0 +1,77 @@
+** SNSPDLibrary **
+
+* This library contains subckts and
+* parameters needed to model an
+* snspd. Specifically there are two
+* nanowire models that simulate the
+* superconducting nanowire's physical
+* response to a photon.
+*
+* The nanowireBCF (Basic Curve Fit)
+* model uses a group of switches
+* parallel to a variable resitor
+* to trace the i-v and pulse
+* curves of a nanowire.
+*
+* The nanowireDynTherm (Dynamic Thermal)
+* model uses sets of ancillary circuits to
+* calculate and simulate the behavior
+* of a nanowire. Each subcircuit is
+* embedded into an snspd subcircuit that
+* uses current pulses to simulate the
+* arivals of a photons.
+
+*************************************
+* nanowireBCF                       *
+*   basic curve-fitting-based model *
+*   of a nanowire                   *
+* gate: 1 uA in 2 ps pulse=photon   *
+*   only connect to current source  *
+* drain: one terminal of channel    *
+* source: other terminal of channel *
+*************************************
+
+.subckt nanowireBCF gate gatereturn drain source
+
+** MAIN CIRCUIT **
+
+* channel Inductor
+L1 drain N1 Flux=({Lind}/(2.0*cos(0.67*asin(0.6*x/{Isw}))-1))*x Rser = 1e-10
+
+* photodetection-event current sensor
+V1 N1 N2 0
+
+* photodetection event current
+B2 N2 N1 I=IF(I(V1)>0,gain*I(R3),-gain*I(R3))
+
+* hotspot plateau current source
+B1 N2 source I=IF(v(n2,source)>0,Ihs,-Ihs)
+
+* hotspot limiting resistor
+R2 N2 source {maxSquares*sheetRes}
+
+* gate input resistor
+R3 gate gatereturn 1
+
+* current sense switch, detects photon arrival
+* actuates in the i>0 range
+W1 N2 N3 V1 currentSwitch OFF
+* actuates in the i<0 range
+W2 N3 N4 V1 negCurrentSwitch ON
+
+
+* model goes normal above hiIthresh and resets below loIThresh
+.model currentSwitch CSW(Ron=1e9 Roff=.01 It={(hiIthresh+loIthresh)/2} Ih={(hiIthresh-loIthresh)/2})
+* model goes normal below -hiIthresh and resets above -loIthresh
+.model negCurrentSwitch CSW(Ron=.01 Roff=1e9 It={-(hiIthresh+loIthresh)/2} Ih={(hiIthresh-loIthresh)/2})
+
+* voltage sense switches
+* actuates in the v>0 range
+S1 N4 N5 N2 source voltageSwitch OFF
+* actuates in the v<0 range
+S2 N5 source N2 source negVoltageSwitch ON
+
+
+.model voltageSwitch SW(Ron=1e9 Roff=.01 Vt={Vthresh} Vh=0)
+.model negVoltageSwitch SW(Ron=.01 Roff=1e9 Vt={-Vthresh} Vh=0)
+.ends nanowireBCF
